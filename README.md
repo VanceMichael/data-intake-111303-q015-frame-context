@@ -15,9 +15,12 @@ npm test
 npm run build
 npm run inspect
 npm run source
+npm start -- --host 127.0.0.1 --port 3000
 ```
 
 `npm test` 检查已有资料源与真实浏览器页面。`npm run build` 做全部 JavaScript 源码语法检查，不生成运行时依赖。`npm run source` 启动回环服务并打印地址，`SOURCE_CASE=1 npm run source` 可切换异常场景。
+
+`npm start` 启动带业务接口的门户服务，首页与 `/portal` 均可操作。可用 `HOST`、`PORT` 配置监听地址，也可通过 `--host`、`--port` 覆盖；默认使用回环地址和自动分配端口。页面与 `/portal/state`、`/portal/action` 必须由同一进程提供，不能只用静态文件服务器托管 web 目录。
 
 ## 工作流接入
 

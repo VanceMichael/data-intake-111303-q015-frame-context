@@ -20,7 +20,7 @@ export function createPortal(scenario, history) {
     actions, state,
     async handle(request, response, raw, origin) {
       const address = new URL(request.url, origin);
-      if (address.pathname === '/portal') {
+      if (address.pathname === '/' || address.pathname === '/portal') {
         const html = await readFile(new URL('../web/index.html', import.meta.url));
         response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
         response.end(html); return true;

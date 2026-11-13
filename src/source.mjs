@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
 
 export async function startSource(scenario, options = {}) {
   if (scenario.kind === 'h2') return (await import('./transport.mjs')).createH2Source(scenario);
@@ -63,7 +64,10 @@ export async function startSource(scenario, options = {}) {
       response.end('本地来源处理失败：' + error.message);
     }
   });
-  await new Promise(resolve => server.listen(0, '0.0.0.0', resolve));
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(options.port ?? 0, options.host ?? '0.0.0.0', resolve);
+  });
   origin = `http://127.0.0.1:${server.address().port}`;
   if (scenario.routes.some(entry => entry.path === '/policy')) {
     for (const tenant of ['A', 'B']) {
@@ -88,7 +92,13 @@ export async function startSource(scenario, options = {}) {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const cases = JSON.parse(await readFile(new URL('../fixtures/cases.json', import.meta.url)));
   const selected = Number(process.env.SOURCE_CASE ?? 0);
-  const instance = await startSource(cases[selected]);
+  const { values } = parseArgs({ options: {
+    host: { type: 'string', default: process.env.HOST ?? '127.0.0.1' },
+    port: { type: 'string', default: process.env.PORT ?? '0' },
+  } });
+  const port = Number(values.port);
+  if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('端口须为 0 到 65535 的整数');
+  const instance = await startSource(cases[selected], { host: values.host, port });
   console.log(JSON.stringify({ source: instance.url, name: cases[selected].name }));
   for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, async () => { await instance.close(); process.exit(0); });
 }
