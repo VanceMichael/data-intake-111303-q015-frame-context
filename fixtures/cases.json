@@ -1,0 +1,66 @@
+[
+  {
+    "name": "上下文一致领取",
+    "routes": [],
+    "input": {
+      "point": "p2",
+      "revision": 2
+    },
+    "expected": {
+      "ids": [
+        "sample-p2"
+      ],
+      "point": "p2",
+      "revision": 2
+    },
+    "required": [],
+    "kind": "browser",
+    "mode": "success",
+    "actions": [
+      "select:p2",
+      "download:p2"
+    ],
+    "productNumber": 15
+  },
+  {
+    "name": "旧内框消息不能冠新身份",
+    "routes": [],
+    "input": {
+      "point": "p2",
+      "revision": 2
+    },
+    "expected": {
+      "ids": [
+        "sample-p2"
+      ],
+      "point": "p2"
+    },
+    "required": [],
+    "kind": "browser",
+    "mode": "late",
+    "actions": [
+      "select:p2",
+      "download:p2"
+    ],
+    "productNumber": 15
+  },
+  {
+    "name": "内外上下文冲突暂缓",
+    "routes": [],
+    "input": {
+      "point": "p2",
+      "revision": 2
+    },
+    "expected": {
+      "state": "context-conflict",
+      "ids": []
+    },
+    "required": [],
+    "kind": "browser",
+    "mode": "conflict",
+    "actions": [
+      "select:p2"
+    ],
+    "productNumber": 15
+  }
+]
