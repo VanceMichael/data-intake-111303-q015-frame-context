@@ -28,6 +28,20 @@ npm start -- --host 127.0.0.1 --port 3000
 
 从 /portal 选观察点，子框架通过不同回环主机名嵌入。主框架和内框各有 point/revision，postMessage 消息包含自己的 generation；只接收当前两层均匹配的下载。输出 point/revision/ids 及框架链，冲突输出 state=context-conflict、ids=[]。
 
+## 跨框架上下文绑定
+
+业务模块 `src/workflow.mjs` 通过 Playwright 驱动真实 Chromium 完成采集，核心规则：
+
+- **逐层确认而非按 URL 采信**：iframe 的 `/frame?point=...` 只是定位线索；机构取内页标题，观察点/修订/代次以主框架 `#outer` 与内页 `main` 两层渲染 DOM 一致为准，并要求收到同 generation 的 postMessage 佐证。
+- **不缓存 frame 句柄**：每次按当前 frame 树重新解析 iframe；监听 `framedetached` 递增 frameEpoch，框架脱离后重建的内页重新走绑定，旧句柄永不复用。
+- **迟到消息过滤**：postMessage 按 generation 过滤，旧 generation 与页面消息区里的旧身份只留痕（`staleMessages`、`messagePanel`），不参与当前上下文判断。
+- **三态区分**：`claimed`（两层一致且领取成功）、`empty`（上下文一致但内页无下载控件，真实无资料）、`not-loaded`/`unreachable`（超时未取得可佐证上下文）、`context-conflict`（两层身份稳定不一致，暂缓接收且不下载）、`claim-failed`（回执与触发上下文不符或被服务端拒绝）。
+- **领取证据绑定**：下载物与触发瞬间的两层上下文快照、实际 HTTP 200 回执、blob 解析内容三者一致才入账，并保存下载后上下文（`contextAfterTrigger.drifted`）；不用后来的页面标题补旧文件。
+- **并行与失联隔离**：`input.points` 多观察点使用独立 BrowserContext 有界并发（默认 2），单内页失联只记录本观察点失败，不阻塞整轮；服务端 generation 漂移导致的 409 自动整轮重试（最多 3 次）。
+- **可恢复**：每个观察点即时写 `journal-<point>-<revision>.json`，成功结果写 `checkpoint.json` 与 `downloads/`；重跑复用收据与文件均可追溯的已领取结果，不依赖调用方内存。
+
+机器人不直接调用 `/portal/state`、`/portal/action`（它们只服务页面本身），所有动作均由页面控件在浏览器内发起。
+
 完整来源约定、输出示例与状态判定见 `docs/source-contract.md`。fixtures 下的资料只用于本地演练，代表不同供方响应或门户状态，不是资料接收器的实现。
 
 ## 业务核对与短演示

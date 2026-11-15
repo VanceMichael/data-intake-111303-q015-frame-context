@@ -67,3 +67,27 @@
   "ids": []
 }
 ```
+
+## 状态与证据字段
+
+工作流只通过真实浏览器页面访问来源，不直连页面内部动作接口。每个观察点结果含下列业务状态之一：
+
+| state | 含义 |
+| --- | --- |
+| `claimed` | 主框架与内页 point/revision/generation 两层一致、同代次消息已佐证，且下载回执与触发上下文一致 |
+| `empty` | 上下文两层一致且消息已佐证，但内页不存在下载控件（真实无资料，区别于未加载） |
+| `context-conflict` | 内页已加载但两层身份稳定不一致；暂缓接收、ids=[]、不触发下载 |
+| `not-loaded` / `unreachable` | 超时内未取得可佐证的两层上下文（框架未附加、消息缺失、内页来源中断等） |
+| `claim-failed` | 已绑定但回执非 200、缺正式收据，或收据 point/revision 与触发上下文不符 |
+
+`claimed` 结果必须输出：机构（`organization`，取内页标题）、观察点（`point`）、修订（`revision`）、框架链（`frameChain`，含每层 url/origin 及 `crossOriginToParent`）、领取证据（`evidence`）：
+
+- `contextAtTrigger`：点击下载瞬间主框架与内页各自的 point/revision/generation；
+- `contextAfterTrigger`：下载完成后再次读取的两层身份及 `drifted` 标记；
+- `actionReply`：页面自身动作请求的真实 HTTP 状态与响应体；
+- `receipt`：回执 id/point/revision/receipt、下载建议文件名、内容 sha256 前缀与字节数；
+- `postMessage`：同代次当前消息 `current` 与仅留痕的 `staleMessages`；
+- `messagePanel`：主页面消息区原文（late 模式下可能是旧身份，不采信）；
+- `downloadFile`：stateDir 内保存的原始下载物；`detachedFrames`、`pageErrors` 为框架脱离与页面错误留痕。
+
+多观察点输入 `{ "points": [{"point":"p1","revision":2},{"point":"p2","revision":2}] }` 返回 `{ "state": "claimed|partial|...", "points": [...] }`；单个观察点输入直接返回该观察点结果。所有结果同时持久化到 stateDir/result.json，过程证据写入 journal 与 checkpoint。
